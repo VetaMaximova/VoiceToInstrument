@@ -9,5 +9,5 @@ include_directories(gaborator)
 
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
 
-add_executable(voice_to_instrument main.cpp kiss_fftr.cpp kissfft.cpp FreqCalculator.cpp GetNoteData.cpp FreqToMIDI.cpp WavReader.cpp)
+add_executable(voice_to_instrument main.cpp kiss_fftr.cpp kissfft.cpp FreqCalculator.cpp GetNoteData.cpp FreqToMIDI.cpp WavReader.cpp window.c)
 target_link_libraries( voice_to_instrument ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} Boost::thread -lpthread -lsndfile)
