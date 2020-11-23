@@ -32,12 +32,14 @@ private:
   std::uint32_t max_point_count;
   std::uint32_t intervals_count = 0;
   std::uint32_t points_in_interval = 0;
+  std::uint32_t signal_points_in_interval = 0;
 
   const Algorithm cAlgorithm = Algorithm::FFT;
-  const int cMinimumIntervalRequiredMs = 300;
+  const int cMinimumIntervalRequiredMs = 0;
   const bool cDebugMode = true;
-  const double cFFTFreqStep = 10;   // 10Hz
-  const double cFreqHysteresis = 1; // 1Hz
+  const bool cUseWindowFunction = false;
+  const double cFFTFreqStep = 1.5;   // 10Hz
+  const double cFreqHysteresis = 1.5; // 1Hz
 };
 
 #endif //_GETFREQ_H_

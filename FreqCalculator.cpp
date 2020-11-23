@@ -4,6 +4,7 @@
 /// (BMW AG)
 ///
 #include "FreqCalculator.h"
+#include "window.h"
 
 #include <algorithm>
 #include <iostream>
@@ -25,11 +26,11 @@ std::vector<kiss_fft_scalar>
 FreqCalculator::GetNextInterval(const std::vector<kiss_fft_scalar> &signal) {
   std::uint32_t current_interval = intervals_count;
   intervals_count++;
-  if ((current_interval + 1) * points_in_interval >= signal.size())
+  if ((current_interval + 1) * signal_points_in_interval >= signal.size())
     return std::vector<kiss_fft_scalar>{};
   return std::vector<kiss_fft_scalar>{
-      signal.begin() + current_interval * points_in_interval,
-      signal.begin() + (current_interval + 1) * points_in_interval};
+      signal.begin() + current_interval * signal_points_in_interval,
+      signal.begin() + (current_interval + 1) * signal_points_in_interval};
 }
 
 std::uint32_t FreqCalculator::GetNextPowerOfTwo(std::uint32_t points_count) {
@@ -43,11 +44,12 @@ std::uint32_t FreqCalculator::GetNextPowerOfTwo(std::uint32_t points_count) {
 std::vector<std::pair<double, double>>
 FreqCalculator::GetFFTFreqWithIntervals(const std::vector<kiss_fft_scalar> &signal) {
   points_in_interval = GetNextPowerOfTwo(fs / cFFTFreqStep);
+  signal_points_in_interval = max_point_count * 10;
   double calculated_freq_step = (double)fs / points_in_interval;
 
   if (cDebugMode) {
     std::cout << "pcnt " << points_in_interval << ", freq step "
-              << calculated_freq_step << std::endl;
+              << calculated_freq_step << " , points from signal " << signal_points_in_interval<< std::endl;
   }
 
   std::vector<kiss_fft_scalar> next_signal = GetNextInterval(signal);
@@ -56,8 +58,21 @@ FreqCalculator::GetFFTFreqWithIntervals(const std::vector<kiss_fft_scalar> &sign
   kiss_fftr_cfg kiss_fft_state;
   kiss_fft_cpx output_array[points_in_interval];
   kiss_fft_state = kiss_fftr_alloc(points_in_interval, 0, 0, 0);
+  kiss_fft_scalar chebwin[points_in_interval];
 
-  while (next_signal.size() == points_in_interval) {
+  if (cUseWindowFunction) {
+    dolphcheb(chebwin, points_in_interval);
+  }
+
+  while (next_signal.size() == signal_points_in_interval) {
+    next_signal.resize(points_in_interval);
+
+    if (cUseWindowFunction) {
+      for (uint p_num = 0; p_num < next_signal.size(); p_num++) {
+        next_signal[p_num] *= chebwin[p_num];
+      }
+    }
+
     kiss_fftr(kiss_fft_state, &next_signal[0], output_array);
 
     double max_freq = 0;
@@ -81,7 +96,7 @@ FreqCalculator::GetFFTFreqWithIntervals(const std::vector<kiss_fft_scalar> &sign
     next_signal = GetNextInterval(signal);
   }
 
-  double time_step_ms = points_in_interval * 1000.0 / fs;
+  double time_step_ms = signal_points_in_interval * 1000.0 / fs;
   std::vector<std::pair<double, double>> freqs_with_times;
   double prev_freq = 0;
   for (auto calc_freq : freqs) {
@@ -107,7 +122,7 @@ FreqCalculator::GetFFTFreqWithIntervals(const std::vector<kiss_fft_scalar> &sign
 
 std::vector<std::pair<double, double>>
 FreqCalculator::GetFreqsWithIntervals(const std::vector<kiss_fft_scalar> &signal) {
-  if (signal.size() < points_in_interval) {
+  if (signal.size() < signal_points_in_interval) {
     return std::vector<std::pair<double, double>>{};
   }
 
